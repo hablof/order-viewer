@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 
-CREATE TABLE order (
+CREATE TABLE orders (
     order_uid    VARCHAR(32) PRIMARY KEY,     -- FOREIGN KEY to payment payment_id = order_uid id заказа
     track_number VARCHAR(32) NOT NULL UNIQUE, -- FOREIGN KEY to item??
     delivery_id  INTEGER     NOT NULL,        -- FOREIGN KEY to delivery
