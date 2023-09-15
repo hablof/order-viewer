@@ -43,9 +43,9 @@ CREATE TABLE payment (
 
 CREATE TABLE item (
     chrt_id      INTEGER      NOT NULL, -- непонятно что такое
-    track_number VARCHAR(32) NOT NULL,    -- not unique: по одному трекномеру несколько товаров
+    track_number VARCHAR(32)  NOT NULL,    -- not unique: по одному трекномеру несколько товаров
     price        INTEGER      NOT NULL,
-    rid          VARCHAR(32) PRIMARY KEY, -- уникальный на доставку+артикул
+    rid          VARCHAR(32)  PRIMARY KEY, -- уникальный на доставку+артикул
     name         VARCHAR(256) NOT NULL,
     sale         INTEGER      NOT NULL DEFAULT 0,
     size         VARCHAR(32)  NOT NULL,
