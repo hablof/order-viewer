@@ -24,6 +24,7 @@ CREATE TABLE delivery (
     zip         VARCHAR(12)  NOT NULL,
     city        VARCHAR(32)  NOT NULL, -- Вынести в отдельную таблицу?
     address     VARCHAR(64)  NOT NULL,
+    region      VARCHAR(64)  NOT NULL
     email       VARCHAR(256) NOT NULL
 );
 
@@ -41,18 +42,17 @@ CREATE TABLE payment (
 );
 
 CREATE TABLE item (
-    rid          VARCHAR(32) PRIMARY KEY, -- уникальный на доставку+артикул
+    chrt_id      INTEGER      NOT NULL, -- непонятно что такое
     track_number VARCHAR(32) NOT NULL,    -- not unique: по одному трекномеру несколько товаров
-
-    nm_id       INTEGER      NOT NULL, -- видимо, артикул
-    chrt_id     INTEGER      NOT NULL, -- непонятно что такое
-    price       INTEGER      NOT NULL,
-    name        VARCHAR(256) NOT NULL,
-    sale        INTEGER      NOT NULL DEFAULT 0,
-    size        VARCHAR(32)  NOT NULL,
-    total_price INTEGER      NOT NULL,
-    brand       VARCHAR(256) NOT NULL,
-    status      INTEGER      NOT NULL  -- непонятно что за числа
+    price        INTEGER      NOT NULL,
+    rid          VARCHAR(32) PRIMARY KEY, -- уникальный на доставку+артикул
+    name         VARCHAR(256) NOT NULL,
+    sale         INTEGER      NOT NULL DEFAULT 0,
+    size         VARCHAR(32)  NOT NULL,
+    total_price  INTEGER      NOT NULL,
+    nm_id        INTEGER      NOT NULL, -- видимо, артикул
+    brand        VARCHAR(256) NOT NULL,
+    status       INTEGER      NOT NULL  -- непонятно что за числа
 );
 
 -- Удобно доставать товары, относящиеся к искомому заказу, исползуя track_number как внешний ключ
