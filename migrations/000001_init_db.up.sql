@@ -1,5 +1,3 @@
--- +goose Up
--- +goose StatementBegin
 
 CREATE TABLE orders (
     order_uid    VARCHAR(32) PRIMARY KEY,     -- FOREIGN KEY to payment transaction = order_uid id заказа, FOREIGN KEY to item
@@ -70,19 +68,3 @@ CREATE INDEX order_uid_idx ON item (order_uid);
 --     order_uid VARCHAR(32) FOREIGN KEY,
 --     item_rid  VARCHAR(32) FOREIGN KEY,
 -- );
-
--- +goose StatementEnd
-
--- +goose Down
--- +goose StatementBegin
-
-DROP INDEX IF EXISTS order_uid_idx;
-
-DROP TABLE IF EXISTS item;
-
-DROP TABLE IF EXISTS payment;
-
-DROP TABLE IF EXISTS delivery;
-
-DROP TABLE IF EXISTS orders;
--- +goose StatementEnd
