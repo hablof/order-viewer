@@ -2,9 +2,9 @@
 -- +goose StatementBegin
 
 CREATE TABLE orders (
-    order_uid    VARCHAR(32) PRIMARY KEY,     -- FOREIGN KEY to payment payment_id = order_uid id заказа
+    order_uid    VARCHAR(32) PRIMARY KEY,     -- FOREIGN KEY to payment payment_id = order_uid id заказа, FOREIGN KEY to item
     track_number VARCHAR(32) NOT NULL UNIQUE, -- FOREIGN KEY to item??
-    delivery_id  INTEGER     NOT NULL,        -- FOREIGN KEY to delivery
+    delivery_id  INTEGER     NOT NULL UNIQUE, -- FOREIGN KEY to delivery
 
     entry              VARCHAR(32)  NOT NULL, -- ??
     locale             VARCHAR(32)  NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE delivery (
 );
 
 CREATE TABLE payment (
-    payment_id    VARCHAR(32)  PRIMARY KEY,
+    payment_id    VARCHAR(32)  PRIMARY KEY, -- payment_id = order_uid id заказа
     request_id    VARCHAR(256) NOT NULL DEFAULT '',
     currency      VARCHAR(16)  NOT NULL, -- Вынести в отдельную таблицу?
     provider      VARCHAR(32)  NOT NULL, -- Вынести в отдельную таблицу?
@@ -42,10 +42,14 @@ CREATE TABLE payment (
 );
 
 CREATE TABLE item (
+
+    -- поскольку в таблице orders и track_number и order_uid обладают войсвом UNIQUE, в качестве внешного ключа можно импользовать и то и другое.
+    -- Будем использовать именно order_uid.
+    order_uid    VARCHAR(32)  NOT NULL, 
     chrt_id      INTEGER      NOT NULL, -- непонятно что такое
-    track_number VARCHAR(32)  NOT NULL,    -- not unique: по одному трекномеру несколько товаров
+    track_number VARCHAR(32)  NOT NULL, -- not unique: по одному трекномеру несколько товаров
     price        INTEGER      NOT NULL,
-    rid          VARCHAR(32)  PRIMARY KEY, -- уникальный на доставку+артикул
+    rid          VARCHAR(32)  NOT NULL, -- возможно уникальный на доставку+артикул, но непонятно, как хранятся заказы с несколькими одинаковами товарами
     name         VARCHAR(256) NOT NULL,
     sale         INTEGER      NOT NULL DEFAULT 0,
     size         VARCHAR(32)  NOT NULL,
@@ -56,7 +60,10 @@ CREATE TABLE item (
 );
 
 -- Удобно доставать товары, относящиеся к искомому заказу, исползуя track_number как внешний ключ
-CREATE INDEX track_number_idx ON item (track_number);
+-- CREATE INDEX track_number_idx ON item (track_number);
+
+-- А ещё удобнее доставать товары, относящиеся к искомому заказу, исползуя ID заказа как внешний ключ
+CREATE INDEX order_uid_idx ON item (order_uid);
 
 -- rid уникальный на доставку+артикул, нет связи "многие ко многим"
 -- CREATE TABLE order_item (
@@ -69,7 +76,7 @@ CREATE INDEX track_number_idx ON item (track_number);
 -- +goose Down
 -- +goose StatementBegin
 
-DROP INDEX IF EXISTS track_number_idx;
+DROP INDEX IF EXISTS order_uid_idx;
 
 DROP TABLE IF EXISTS item;
 
