@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 
 CREATE TABLE orders (
-    order_uid    VARCHAR(32) PRIMARY KEY,     -- FOREIGN KEY to payment payment_id = order_uid id заказа, FOREIGN KEY to item
+    order_uid    VARCHAR(32) PRIMARY KEY,     -- FOREIGN KEY to payment transaction = order_uid id заказа, FOREIGN KEY to item
     track_number VARCHAR(32) NOT NULL UNIQUE, -- FOREIGN KEY to item??
     delivery_id  INTEGER     NOT NULL UNIQUE, -- FOREIGN KEY to delivery
 
@@ -29,7 +29,7 @@ CREATE TABLE delivery (
 );
 
 CREATE TABLE payment (
-    payment_id    VARCHAR(32)  PRIMARY KEY, -- payment_id = order_uid id заказа
+    transaction   VARCHAR(32)  PRIMARY KEY, -- transaction = order_uid id заказа
     request_id    VARCHAR(256) NOT NULL DEFAULT '',
     currency      VARCHAR(16)  NOT NULL, -- Вынести в отдельную таблицу?
     provider      VARCHAR(32)  NOT NULL, -- Вынести в отдельную таблицу?
@@ -43,7 +43,7 @@ CREATE TABLE payment (
 
 CREATE TABLE item (
 
-    -- поскольку в таблице orders и track_number и order_uid обладают войсвом UNIQUE, в качестве внешного ключа можно импользовать и то и другое.
+    -- поскольку в таблице orders и track_number и order_uid обладают свойством UNIQUE, в качестве внешного ключа можно импользовать и то и другое.
     -- Будем использовать именно order_uid.
     order_uid    VARCHAR(32)  NOT NULL, 
     chrt_id      INTEGER      NOT NULL, -- непонятно что такое

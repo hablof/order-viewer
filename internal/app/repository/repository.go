@@ -5,17 +5,12 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/hablof/order-viewer/internal/models"
 	"github.com/jackc/pgx/v5"
 )
 
 const (
 	prepareStatementsTimeOut time.Duration = 5 * time.Second
 	queryTimeout             time.Duration = time.Second
-)
-
-const (
-	itemColumns string = "chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status"
 )
 
 // Prepared stmts
@@ -89,6 +84,8 @@ type Repository struct {
 	initQuery sq.StatementBuilderType
 }
 
+// Создание репозитория подразумевает формирование
+// подготовленных выражений для добавления записи
 func NewRepository(ctx context.Context, conn *pgx.Conn) (*Repository, error) {
 	r := &Repository{
 		conn:      conn,
@@ -124,98 +121,6 @@ func (r *Repository) prepareStatements(ctx context.Context) error {
 	return nil
 }
 
-func (r *Repository) InsertOrder(ctx context.Context, order models.Order) error {
-	query := r.initQuery.Insert("item").Columns(itemColumns)
-
-	for _, item := range order.Items {
-		query.Values(
-			item.ChrtID,
-			item.TrackNumber,
-			item.Price,
-			item.RID,
-			item.Name,
-			item.Sale,
-			item.Size,
-			item.TotalPrice,
-			item.NMID,
-			item.Brand,
-			item.Status,
-		)
-	}
-
-	insertItemQuery, insertItemArgs, err := query.ToSql()
-	if err != nil {
-		return err
-	}
-
-	insertOrderAndDeliveryArgs := r.orderAndDeliveryArgs(order)
-	insertPaymentArgs := r.paymentArgs(order.Payment)
-
-	tx, err := r.conn.BeginTx(ctx, pgx.TxOptions{
-		IsoLevel: "",
-	})
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	if _, err := tx.Exec(ctx, insertOrderAndDeliveryStmtName, insertOrderAndDeliveryArgs...); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, insertPaymentStmtName, insertPaymentArgs...); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, insertItemQuery, insertItemArgs...); err != nil {
-		return err
-	}
-
-	err = tx.Commit(ctx)
-	return err
-}
-
 // func (r *Repository) ReadAllOrdersWithoutItems(ctx context.Context) ([]models.Order, error) {
 // 	r.initQuery.Select()
 // }
-
-func (r *Repository) paymentArgs(payment models.Payment) []interface{} {
-	args := []interface{}{
-		payment.Transaction,
-		payment.RequestID,
-		payment.Currency,
-		payment.Provider,
-		payment.Amount,
-		payment.PaymentDT,
-		payment.Bank,
-		payment.DeliveryCost,
-		payment.GoodsTotal,
-		payment.CustomFee,
-	}
-
-	return args
-}
-
-func (r *Repository) orderAndDeliveryArgs(order models.Order) []interface{} {
-	args := []interface{}{
-		order.OrderUID,
-		order.TrackNumber,
-		order.Entry,
-		order.Locale,
-		order.InternalSignature,
-		order.CustomerID,
-		order.DeliveryService,
-		order.ShardKey,
-		order.SMID,
-		order.DateCreated,
-		order.OofShard,
-
-		order.Delivery.Name,
-		order.Delivery.Phone,
-		order.Delivery.Zip,
-		order.Delivery.City,
-		order.Delivery.Address,
-		order.Delivery.Region,
-		order.Delivery.Email,
-	}
-
-	return args
-}
