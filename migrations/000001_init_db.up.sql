@@ -22,7 +22,7 @@ CREATE TABLE delivery (
     zip         VARCHAR(12)  NOT NULL,
     city        VARCHAR(32)  NOT NULL, -- Вынести в отдельную таблицу?
     address     VARCHAR(64)  NOT NULL,
-    region      VARCHAR(64)  NOT NULL
+    region      VARCHAR(64)  NOT NULL,
     email       VARCHAR(256) NOT NULL
 );
 

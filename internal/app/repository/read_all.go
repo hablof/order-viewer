@@ -3,7 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/hablof/order-viewer/internal/models"
 )
 
@@ -14,6 +15,7 @@ const (
 )
 
 // Иметь prepared stmt для ReadAll не имеет смысла -- выполняется один раз на старте приложения
+
 func (r *Repository) ReadAll(ctx context.Context) (map[string]models.Order, error) {
 	selectOrderDeliveryPaymentQuery, _, err := r.initQuery.
 		Select(orderColumns, deliveryColumns, paymentColumns).
@@ -43,8 +45,8 @@ func (r *Repository) ReadAll(ctx context.Context) (map[string]models.Order, erro
 	orders := make(map[string]models.Order) // order_uid -> order
 
 	for orderRows.Next() {
-		newOrder := models.Order{}
-		if err := pgxscan.ScanRow(&newOrder, orderRows); err != nil {
+		newOrder, err := scanOrder(orderRows)
+		if err != nil {
 			return nil, err
 		}
 
@@ -59,8 +61,8 @@ func (r *Repository) ReadAll(ctx context.Context) (map[string]models.Order, erro
 	defer itemRows.Close()
 
 	for itemRows.Next() {
-		newItem := models.Item{}
-		if err := pgxscan.ScanRow(&newItem, itemRows); err != nil {
+		newItem, err := scanItem(itemRows)
+		if err != nil {
 			return nil, err
 		}
 
@@ -72,40 +74,62 @@ func (r *Repository) ReadAll(ctx context.Context) (map[string]models.Order, erro
 	return orders, nil
 }
 
-// func scanOrder() {
-// 	for rows.Next() {
-// 		newOrder := models.Order{}
-// 		rows.Scan(
-// 			&newOrder.OrderUID,
-// 			&newOrder.TrackNumber,
-// 			&newOrder.Entry,
-// 			&newOrder.Locale,
-// 			&newOrder.InternalSignature,
-// 			&newOrder.CustomerID,
-// 			&newOrder.DeliveryService,
-// 			&newOrder.ShardKey,
-// 			&newOrder.SMID,
-// 			&newOrder.DateCreated,
-// 			&newOrder.OofShard,
+func scanOrder(orderRows pgx.Rows) (models.Order, error) {
 
-// 			&newOrder.Delivery.Name,
-// 			&newOrder.Delivery.Phone,
-// 			&newOrder.Delivery.Zip,
-// 			&newOrder.Delivery.City,
-// 			&newOrder.Delivery.Address,
-// 			&newOrder.Delivery.Region,
-// 			&newOrder.Delivery.Email,
+	newOrder := models.Order{}
+	err := orderRows.Scan(
+		&newOrder.OrderUID,
+		&newOrder.TrackNumber,
+		&newOrder.Entry,
+		&newOrder.Locale,
+		&newOrder.InternalSignature,
+		&newOrder.CustomerID,
+		&newOrder.DeliveryService,
+		&newOrder.ShardKey,
+		&newOrder.SMID,
+		&newOrder.DateCreated,
+		&newOrder.OofShard,
 
-// 			&newOrder.Payment.Transaction,
-// 			&newOrder.Payment.RequestID,
-// 			&newOrder.Payment.Currency,
-// 			&newOrder.Payment.Provider,
-// 			&newOrder.Payment.Amount,
-// 			&newOrder.Payment.PaymentDT,
-// 			&newOrder.Payment.Bank,
-// 			&newOrder.Payment.DeliveryCost,
-// 			&newOrder.Payment.GoodsTotal,
-// 			&newOrder.Payment.CustomFee,
-// 		)
-// 	}
-// }
+		&newOrder.Delivery.Name,
+		&newOrder.Delivery.Phone,
+		&newOrder.Delivery.Zip,
+		&newOrder.Delivery.City,
+		&newOrder.Delivery.Address,
+		&newOrder.Delivery.Region,
+		&newOrder.Delivery.Email,
+
+		&newOrder.Payment.Transaction,
+		&newOrder.Payment.RequestID,
+		&newOrder.Payment.Currency,
+		&newOrder.Payment.Provider,
+		&newOrder.Payment.Amount,
+		&newOrder.Payment.PaymentDT,
+		&newOrder.Payment.Bank,
+		&newOrder.Payment.DeliveryCost,
+		&newOrder.Payment.GoodsTotal,
+		&newOrder.Payment.CustomFee,
+	)
+
+	return newOrder, err
+}
+
+func scanItem(itemRows pgx.Rows) (models.Item, error) {
+
+	newItem := models.Item{}
+	err := itemRows.Scan(
+		&newItem.OrderUID,
+		&newItem.ChrtID,
+		&newItem.TrackNumber,
+		&newItem.Price,
+		&newItem.RID,
+		&newItem.Name,
+		&newItem.Sale,
+		&newItem.Size,
+		&newItem.TotalPrice,
+		&newItem.NMID,
+		&newItem.Brand,
+		&newItem.Status,
+	)
+
+	return newItem, err
+}

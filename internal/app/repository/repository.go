@@ -20,6 +20,11 @@ const (
 	// 1) Для добавления записи (заказ, доставка)
 	insertOrderAndDeliveryStmtName string = "insert_order_and_delivery_stmt"
 	insertOrdersAndDeliverySQL     string = `
+	WITH dq(id) as(
+		INSERT INTO delivery (name, phone, zip, city, address, region, email)
+		VALUES ($12, $13, $14, $15, $16, $17, $18)
+		RETURNING delivery_id
+	)
 	INSERT INTO orders (
 		delivery_id, 
 		order_uid, track_number, entry, locale, internal_signature,
@@ -28,11 +33,8 @@ const (
 	VALUES 
 	(
 		(
-			INSERT INTO delivery (name, phone, zip, city, address, region, email)
-			VALUES ($12, $13, $14, $15, $16, $17, $18)
-			RETURNING delivery_id
-		),
-		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+			SELECT id FROM dq
+		), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 	)`
 
 	// 2) Для добавления записи (платёж)

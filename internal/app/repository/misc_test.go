@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	testObjs = []models.Order{
+	testOrders = []models.Order{
 		{
 			OrderUID:    "first_uid",
 			TrackNumber: "first_track",

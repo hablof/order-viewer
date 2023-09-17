@@ -22,7 +22,7 @@ func (r *Repository) InsertOrder(ctx context.Context, order models.Order) error 
 	query := r.initQuery.Insert("item").Columns(itemColumns)
 
 	for _, item := range order.Items {
-		query.Values(
+		query = query.Values(
 			item.OrderUID,
 			item.ChrtID,
 			item.TrackNumber,
