@@ -14,8 +14,10 @@ var (
 	ErrDuplicatesNotAllowed = errors.New("not allowed to store duplicates")
 )
 
-// // service errors
-// var ()
+// service errors
+var (
+	ErrOrderNotFound = errors.New("order not found")
+)
 
 type Repository interface {
 	ReadAll(ctx context.Context) (map[string]models.Order, error)
@@ -81,11 +83,7 @@ func (s *Service) SaveOrder(ctx context.Context, order models.Order) error {
 func (s *Service) GetOrder(ctx context.Context, OrderUID string) (models.Order, error) {
 	order, err := s.c.Get(OrderUID)
 	if err != nil {
-		return models.Order{},
-			ErrCacheErr{
-				Msg: "failed to get order from cache",
-				Err: err,
-			}
+		return models.Order{}, ErrOrderNotFound
 	}
 
 	return order, nil
