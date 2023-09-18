@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/hablof/order-viewer/internal/app/service"
@@ -55,7 +56,7 @@ func (c *Controller) GetOrder(w http.ResponseWriter, r *http.Request, p httprout
 
 	b := bytes.Buffer{}
 	if err := c.template.ExecuteTemplate(&b, "order.html", order); err != nil {
-
+		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal Server Error")
 

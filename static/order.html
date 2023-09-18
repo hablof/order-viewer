@@ -1,20 +1,95 @@
 <!DOCTYPE html>
-  <head>
-    <title>Заказ</title>
-  </head>
-  <body>
-
-    
-
-    <h3>Items:</h3>
-
-    <ul>
-      {{range .Items}}
-       
-
-
-
-      {{end}}
-    </ul>
-  </body>
+    <head>
+        <title>Заказ № {{ .OrderUID }}</title>
+    </head>
+    <body>
+        <div>
+            <div>
+                <h2>Заказ № {{ .OrderUID }}</h2>
+            </div>
+            <p> от {{ .DateCreated.Format "02.01.2006" }}</p>
+        </div>
+        <div>
+            <div>Доставка</div>
+            <div>
+                <div>
+                    <div>{{ .Delivery.Region }}, {{ .Delivery.City }}, {{ .Delivery.Address }}</div>
+                </div>
+            </div>
+            <div>
+                <div>
+                    <div>Получатель</div>
+                    <div>{{ .Delivery.Name }} {{ .Delivery.Email }} {{ .Delivery.Phone }}</div>
+                </div>
+            </div>
+            <div>
+                <div>
+                    {{ .TrackNumber }}
+                </div>
+                {{ .DeliveryService }}
+            </div>
+        </div>
+        <div>
+            <div>
+                <div>
+                    <div>
+                        Оплачено
+                    </div>
+                    <div>
+                        {{ .Payment.Amount }} {{ .Payment.Currency }}
+                    </div>
+                </div>
+                <details>
+                    <summary>Подробнее</summary>
+                    <p>Платёжная система: {{ .Payment.Provider }}</p>
+                    <p>Платёж совершён: {{ .Payment.PaymentDT.Format "02.01.2006 15:04" }}</p>
+                    <p>Банк эмитент: {{ .Payment.Bank }}</p>
+                    <p>Таможенный сбор: {{ .Payment.CustomFee }}</p>
+                </details>
+            </div>
+            <div>
+                <div>
+                    <div>
+                        Товары
+                    </div>
+                    <div>
+                        {{ .Payment.GoodsTotal }} {{ .Payment.Currency }}
+                    </div>
+                </div>
+                <div>
+                    <div>
+                        Доставка
+                    </div>
+                    <div>
+                        {{ .Payment.DeliveryCost }} {{ .Payment.Currency }}
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div>
+                    Итого
+                </div>
+                <div>
+                    {{ .Payment.Amount }} {{ .Payment.Currency }}
+                </div>
+            </div>
+        </div>
+        <div>
+            <p>{{ len .Items }} товара</p>
+            <ul>
+                {{ range .Items }}
+                <li>
+                    <div>
+                        <p>{{ .Brand }}</p>
+                        <div> {{ .Name }}</div>
+                        <div>
+                            <s>{{ .Price }} ₽</s> -{{.Sale}}%
+                            <div> {{ .TotalPrice }} ₽ </div>
+                        </div>
+                    </div>
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+    </body>
 </html>
