@@ -30,7 +30,8 @@ type Order struct {
 	OofShard          string    `json:"oof_shard"`
 }
 
-func (o Order) IsValid() error {
+// returns nil if order is valid
+func (o Order) Validate() error {
 	var err error
 	if len(o.Items) == 0 {
 		err = errors.Join(err, ErrNoItems)

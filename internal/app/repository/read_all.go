@@ -74,6 +74,8 @@ func (r *Repository) ReadAll(ctx context.Context) (map[string]models.Order, erro
 	return orders, nil
 }
 
+// Хотел использовать github.com/georgysavva/scany/v2,
+// но он не умеет не находит поля во вложенных структурах...
 func scanOrder(orderRows pgx.Rows) (models.Order, error) {
 
 	newOrder := models.Order{}
