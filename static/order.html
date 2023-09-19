@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><head>
-    <!-- <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
-    <title>Заказ <b>{{ .OrderUID }}</b></title>
+    
+    <title>Заказ {{ .OrderUID }}</title>
     <style>
         body, html {
             margin: 0;
@@ -32,7 +31,7 @@
             border: 1px solid #ccc;
             padding: 10px;
             font-family: Calibri;
-            
+
         }
 
         .order-caption {
@@ -57,10 +56,10 @@
             flex: 0 0 35%;
         }
 
-        .money {
+        .money, .total-price {
             font-family: 'Courier New', Courier, monospace;
             font-stretch: expanded;
-            font-weight: 800;
+            font-weight: 900;
         }
 
         .pay-goods, .pay-delivery, .pay-total {
@@ -68,21 +67,92 @@
             margin-top: 20px;
         }
 
-        /* Right column (dynamic width, scrollable) */
+        
         .right-column {
             flex: 1; /* Take remaining space */
-            background-color: #e0e0e0;
-            padding: 10px;
-            box-sizing: border-box;
-            overflow-y: auto;
             min-width: 400px;
+            background-color: #715383;
+            overflow-y: hidden;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Cards in the right column (example styles) */
+        .headliner {
+            padding: 15px;
+            padding-left: 25px;
+            background-color: #ffffff;
+            border: 2px black;
+            box-shadow: inset 3px -3px;
+        }
+        
+        .scroll-column {
+            background-color: #6c4781;
+            padding: 5px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            height: 100%;
+            /* display: flex; */
+            flex-direction: column;
+        }
+
+        .name-and-brand {
+            flex-direction: row;
+            display: flex;
+        }
+
+        .goods-name {
+            flex: 1;
+            margin-left: 5px;
+            font-size: 22px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .brand-name {
+            width: 150px;
+            text-align: right;
+            font-size: 20px;
+            margin-right: 8px;
+            font-style: oblique 10deg;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        .goods-price-info {
+            flex: 1;
+            flex-direction: row;
+            display: flex;
+            margin-left: 10px;
+        }
+
+        .price-before-sale {
+            margin-right: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-stretch: expanded;
+            font-weight: 900;
+            text-decoration: line-through;
+	        text-decoration-color: red;
+            text-decoration-thickness: 2px;
+
+        }
+
+        .sale {
+            margin-right: 15px;
+            padding: 4px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            background-color: rgb(126, 0, 0);
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+            font-weight: 900;
+            color: #ffffff;
+        }
+
         .card {
             background-color: #fff;
             border: 1px solid #ccc;
             padding: 10px;
+            margin: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
         }
@@ -93,7 +163,7 @@
     <div class="container">
         <div class="left-column">
             <div class="top-group">
-                <div class="order-caption"> 📑 Заказ {{ .OrderUID }}</div>
+                <div class="order-caption"> 📑 Заказ {{ .OrderUID }} </div>
                 <div class="order-dt">от {{ .DateCreated.Format "02.01.2006" }}</div>
                 <div class="delivery"> 🚚 Доставка
                     <div class="address">{{ .Delivery.Region }}, {{ .Delivery.City }}, {{ .Delivery.Address }}</div>
@@ -107,7 +177,7 @@
             <div class="bottom-group">
                 <div class="summary">
                     <div>
-                        Оплачено
+                        ✅ Оплачено
                     </div>
                     <div class="pay-goods">Товары
                         <div class="money">{{ .Payment.GoodsTotal }} {{ .Payment.Currency }}</div>
@@ -134,18 +204,28 @@
 
         <div class="right-column">
             <div class="headliner">
-                {{ len .Items }} товаров
+                Товары: {{ len .Items }} шт.
             </div>
 
-            {{ range .Items }}
-            <div class="card">
-                <h3>{{ .Name }}</h3>
-                {{ if gt .Sale 0}}
-                <s>{{ .Price }} ₽</s> -{{.Sale}}%              
+            <div class="scroll-column">
+                {{ range .Items }}
+                <div class="card">
+                    <div class="name-and-brand">
+                        <div class="goods-name">{{ .Name }}</div>
+                        <div class="brand-name">{{ .Brand }}</div>
+                    </div>
+
+                    <div class="goods-price-info">
+                        {{ if gt .Sale 0 }}
+                        <div class="price-before-sale">{{ .Price }} ₽</div> 
+                        <div class="sale">-{{.Sale}}%</div>
+
+                        {{ end }}
+                        <div class="total-price"> {{ .TotalPrice }} ₽ </div>
+                    </div>
+                </div>
                 {{ end }}
-                <div class="total-price"> {{ .TotalPrice }} ₽ </div>
             </div>
-            {{ end }}
             
         </div>
     </div>
