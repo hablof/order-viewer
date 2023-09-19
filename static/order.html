@@ -1,95 +1,153 @@
 <!DOCTYPE html>
-    <head>
-        <title>Заказ № {{ .OrderUID }}</title>
-    </head>
-    <body>
-        <div>
-            <div>
-                <h2>Заказ № {{ .OrderUID }}</h2>
-            </div>
-            <p> от {{ .DateCreated.Format "02.01.2006" }}</p>
-        </div>
-        <div>
-            <div>Доставка</div>
-            <div>
-                <div>
-                    <div>{{ .Delivery.Region }}, {{ .Delivery.City }}, {{ .Delivery.Address }}</div>
+<html lang="en">
+<head><head>
+    <!-- <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    <title>Заказ <b>{{ .OrderUID }}</b></title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        .container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        .left-column {
+            flex: 0 0 500px; 
+            background-color: #f0f0f0;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-group {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 10px;
+            font-family: Calibri;
+            
+        }
+
+        .order-caption {
+            font-size: 30px;
+            font-family: sans-serif;
+        }
+
+        .delivery, .reciver, .delivery-service {
+            margin: 5px;
+            margin-top: 20px;
+        }
+
+        .bottom-group {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 30px;
+            display: flex;
+            font-family: Calibri;
+        }
+
+        .summary {
+            flex: 0 0 35%;
+        }
+
+        .money {
+            font-family: 'Courier New', Courier, monospace;
+            font-stretch: expanded;
+            font-weight: 800;
+        }
+
+        .pay-goods, .pay-delivery, .pay-total {
+            margin: 5px;
+            margin-top: 20px;
+        }
+
+        /* Right column (dynamic width, scrollable) */
+        .right-column {
+            flex: 1; /* Take remaining space */
+            background-color: #e0e0e0;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            min-width: 400px;
+        }
+
+        /* Cards in the right column (example styles) */
+        .card {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-column">
+            <div class="top-group">
+                <div class="order-caption"> 📑 Заказ {{ .OrderUID }}</div>
+                <div class="order-dt">от {{ .DateCreated.Format "02.01.2006" }}</div>
+                <div class="delivery"> 🚚 Доставка
+                    <div class="address">{{ .Delivery.Region }}, {{ .Delivery.City }}, {{ .Delivery.Address }}</div>
                 </div>
-            </div>
-            <div>
-                <div>
-                    <div>Получатель</div>
-                    <div>{{ .Delivery.Name }} {{ .Delivery.Email }} {{ .Delivery.Phone }}</div>
+                <div class="reciver"> ( ͡° ͜ʖ ͡°) Получатель
+                    <div class="fio">{{ .Delivery.Name }} {{ .Delivery.Email }} {{ .Delivery.Phone }}</div>
                 </div>
+                <div class="delivery-service"> 📦 {{ .DeliveryService }} {{ .TrackNumber }}</div>
             </div>
-            <div>
-                <div>
-                    {{ .TrackNumber }}
-                </div>
-                {{ .DeliveryService }}
-            </div>
-        </div>
-        <div>
-            <div>
-                <div>
+
+            <div class="bottom-group">
+                <div class="summary">
                     <div>
                         Оплачено
                     </div>
-                    <div>
-                        {{ .Payment.Amount }} {{ .Payment.Currency }}
+                    <div class="pay-goods">Товары
+                        <div class="money">{{ .Payment.GoodsTotal }} {{ .Payment.Currency }}</div>
+                    </div>
+                    <div class="pay-delivery">Доставка
+                        <div class="money">{{ .Payment.DeliveryCost }} {{ .Payment.Currency }}</div>
+                    </div>
+                    <div class="pay-total">Итого
+                        <div class="money">{{ .Payment.Amount }} {{ .Payment.Currency }}</div>
                     </div>
                 </div>
-                <details>
-                    <summary>Подробнее</summary>
-                    <p>Платёжная система: {{ .Payment.Provider }}</p>
-                    <p>Платёж совершён: {{ .Payment.PaymentDT.Format "02.01.2006 15:04" }}</p>
-                    <p>Банк эмитент: {{ .Payment.Bank }}</p>
-                    <p>Таможенный сбор: {{ .Payment.CustomFee }}</p>
-                </details>
-            </div>
-            <div>
+                
                 <div>
-                    <div>
-                        Товары
-                    </div>
-                    <div>
-                        {{ .Payment.GoodsTotal }} {{ .Payment.Currency }}
-                    </div>
-                </div>
-                <div>
-                    <div>
-                        Доставка
-                    </div>
-                    <div>
-                        {{ .Payment.DeliveryCost }} {{ .Payment.Currency }}
-                    </div>
-                </div>
-            </div>
-            <div>
-                <div>
-                    Итого
-                </div>
-                <div>
-                    {{ .Payment.Amount }} {{ .Payment.Currency }}
+                    <details class="payment-details">
+                        <summary>Подробнее</summary>
+                        <p>Платёжная система: &#9;{{ .Payment.Provider }}</p>
+                        <p>Платёж совершён: &#9;{{ .Payment.PaymentDT.Format "02.01.2006 15:04" }}</p>
+                        <p>Банк эмитент: &#9;{{ .Payment.Bank }}</p>
+                        <p>Таможенный сбор: &#9;{{ .Payment.CustomFee }}</p>
+                    </details>
                 </div>
             </div>
         </div>
-        <div>
-            <p>{{ len .Items }} товара</p>
-            <ul>
-                {{ range .Items }}
-                <li>
-                    <div>
-                        <p>{{ .Brand }}</p>
-                        <div> {{ .Name }}</div>
-                        <div>
-                            <s>{{ .Price }} ₽</s> -{{.Sale}}%
-                            <div> {{ .TotalPrice }} ₽ </div>
-                        </div>
-                    </div>
-                </li>
+
+        <div class="right-column">
+            <div class="headliner">
+                {{ len .Items }} товаров
+            </div>
+
+            {{ range .Items }}
+            <div class="card">
+                <h3>{{ .Name }}</h3>
+                {{ if gt .Sale 0}}
+                <s>{{ .Price }} ₽</s> -{{.Sale}}%              
                 {{ end }}
-            </ul>
+                <div class="total-price"> {{ .TotalPrice }} ₽ </div>
+            </div>
+            {{ end }}
+            
         </div>
-    </body>
+    </div>
+</body>
 </html>
