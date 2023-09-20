@@ -278,36 +278,22 @@ func main() {
 	// 	return
 	// }
 
-	// mux := httpcontroller.GetRouter(MockService{}, t)
+	// inmem.NewInMemCache()
+	// service.NewService()
+
+	// mux := httpcontroller.GetRouter(, t)
 
 	// http.ListenAndServe(":8000", mux)
 
 	ctx, cf := context.WithCancel(context.Background())
 	defer cf()
 
-	conn, err := consumer.StanConn()
+	sc, err := consumer.RegisterStanClient(MockService{})
 	if err != nil {
-		log.Println("failed to create consumer1: ", err)
+		log.Println("failed to register nats client")
 	}
 
-	c1, err := consumer.NewConsumer(conn, MockService{}, 1)
-	if err != nil {
-		log.Println("failed to create consumer1: ", err)
-	}
-
-	c2, err := consumer.NewConsumer(conn, MockService{}, 2)
-	if err != nil {
-		log.Println("failed to create consumer2: ", err)
-	}
-
-	c3, err := consumer.NewConsumer(conn, MockService{}, 3)
-	if err != nil {
-		log.Println("failed to create consumer3: ", err)
-	}
-
-	go c1.Run(ctx)
-	go c2.Run(ctx)
-	go c3.Run(ctx)
+	go sc.RunNconsumers(ctx, 3)
 
 	terminationChannel := make(chan os.Signal, 1)
 	signal.Notify(terminationChannel, os.Interrupt, syscall.SIGTERM)

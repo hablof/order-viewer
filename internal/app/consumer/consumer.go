@@ -17,6 +17,9 @@ const (
 
 	clientName = "order-viewer-sub"
 	clientID   = "order-viewer-id"
+
+	durableQueueGroup = "order-viewer-group"
+	subject           = "orders"
 )
 
 const (
@@ -27,46 +30,12 @@ type Service interface {
 	SaveOrder(ctx context.Context, order models.Order) error
 }
 
-type Consumer struct {
-	con     stan.Conn
+type SubscriberClient struct {
 	service Service
-	id      int
+	con     stan.Conn
 }
 
-func NewConsumer(con stan.Conn, s Service, id int) (*Consumer, error) {
-
-	return &Consumer{
-		con:     con,
-		service: s,
-		id:      id,
-	}, nil
-}
-
-func (c *Consumer) getMessageHandler(ctx context.Context) func(msg *stan.Msg) {
-	return func(msg *stan.Msg) {
-
-		ctx, cf := context.WithTimeout(ctx, saveOrdeTimeout)
-		defer cf()
-
-		log.Println("consumer#", c.id, " recived msg")
-
-		data := msg.Data
-
-		order := models.Order{}
-
-		if err := json.Unmarshal(data, &order); err != nil {
-			log.Println("failed to unmarshal data: ", err)
-			return
-		}
-
-		if err := c.service.SaveOrder(ctx, order); err != nil {
-			log.Println("consumer#", c.id, "failed to save order")
-		}
-
-	}
-}
-
-func StanConn() (stan.Conn, error) {
+func RegisterStanClient(s Service) (*SubscriberClient, error) {
 	opts := []nats.Option{nats.Name(clientName)}
 
 	natsConnection, err := nats.Connect(natsURL, opts...)
@@ -84,40 +53,69 @@ func StanConn() (stan.Conn, error) {
 		log.Fatalf("failed to connect to STAN: %v", err)
 		return nil, err
 	}
-	return stanConnection, nil
+
+	return &SubscriberClient{
+		service: s,
+		con:     stanConnection,
+	}, nil
 }
 
-// Run is blocking operation
+// RunNconsumers is blocking operation
 // returns error if unable to run
-// ctx.Done stops consumer, returning nil
-func (c *Consumer) Run(ctx context.Context) error {
+// ctx.Done stops consumers, returning nil
+func (sc *SubscriberClient) RunNconsumers(ctx context.Context, number int) error {
 	ctx, cf := context.WithCancel(ctx)
 	defer cf()
 
-	msgHandler := c.getMessageHandler(ctx)
+	for i := 0; i < number; i++ {
+		c := consumer{
+			service: sc.service,
+			id:      i,
+		}
+		msgHandler := c.getMessageHandler(ctx)
 
-	subscription, err := c.con.QueueSubscribe("orders", "order-viewer-group", msgHandler, stan.StartWithLastReceived(), stan.DurableName("order-viewer-group"))
-	if err != nil {
-		c.con.Close()
-		log.Println(err)
+		subscription, err := sc.con.QueueSubscribe(subject, durableQueueGroup, msgHandler, stan.StartWithLastReceived(), stan.DurableName(durableQueueGroup))
+		if err != nil {
+			sc.con.Close()
+			log.Println(err)
 
-		return err
+			return err
+		}
+		defer subscription.Close()
 	}
 
 	log.Println("subscribed")
 
 	<-ctx.Done()
+
 	log.Println("consumer recived shutdown signal")
 
-	if err := subscription.Close(); err != nil {
-		log.Println("failed to close STAN subscription: ", err)
-	}
-
-	if err := c.con.Close(); err != nil {
-		log.Println("failed to close STAN connection: ", err)
-	}
-
-	c.con.NatsConn().Close()
-
 	return nil
+}
+
+type consumer struct {
+	service Service
+	id      int
+}
+
+func (c *consumer) getMessageHandler(ctx context.Context) func(msg *stan.Msg) {
+
+	return func(msg *stan.Msg) {
+
+		ctx, cf := context.WithTimeout(ctx, saveOrdeTimeout)
+		defer cf()
+
+		log.Printf("consumer #%d recived msg", c.id)
+
+		order := models.Order{}
+
+		if err := json.Unmarshal(msg.Data, &order); err != nil {
+			log.Println("failed to unmarshal data: ", err)
+			return
+		}
+
+		if err := c.service.SaveOrder(ctx, order); err != nil {
+			log.Printf("consumer #%d failed to save order", c.id)
+		}
+	}
 }
