@@ -3,8 +3,8 @@ package inmem
 import (
 	"sync"
 
-	"github.com/hablof/order-viewer/internal/app/service"
 	"github.com/hablof/order-viewer/internal/models"
+	"github.com/hablof/order-viewer/internal/service"
 )
 
 type inMemCache struct {

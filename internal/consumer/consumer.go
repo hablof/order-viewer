@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"time"
 
+	nats "github.com/nats-io/nats.go"
+	"github.com/nats-io/stan.go"
 	"github.com/rs/zerolog/log"
 
 	"github.com/hablof/order-viewer/internal/models"
-	nats "github.com/nats-io/nats.go"
-	"github.com/nats-io/stan.go"
 )
 
 const (

@@ -9,16 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/hablof/order-viewer/internal/app/cache/inmem"
-	"github.com/hablof/order-viewer/internal/app/consumer"
-	"github.com/hablof/order-viewer/internal/app/repository"
-	"github.com/hablof/order-viewer/internal/app/service"
+	"github.com/hablof/order-viewer/internal/cache/inmem"
+	"github.com/hablof/order-viewer/internal/consumer"
 	"github.com/hablof/order-viewer/internal/database"
 	"github.com/hablof/order-viewer/internal/httpcontroller"
+	"github.com/hablof/order-viewer/internal/repository"
+	"github.com/hablof/order-viewer/internal/service"
 	"github.com/hablof/order-viewer/internal/templates"
-	"github.com/rs/zerolog"
 )
 
 const (

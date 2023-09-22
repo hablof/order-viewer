@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/hablof/order-viewer/internal/app/service"
 	"github.com/hablof/order-viewer/internal/models"
+	"github.com/hablof/order-viewer/internal/service"
 )
 
 const (
