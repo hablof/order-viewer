@@ -4,19 +4,19 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
 	connectTimeout time.Duration = 5 * time.Second
 )
 
-func NewPostgres(ctx context.Context, url string) (*pgx.Conn, error) {
+func NewPostgres(ctx context.Context, url string) (*pgxpool.Pool, error) {
 
 	ctx, cf := context.WithTimeout(ctx, connectTimeout)
 	defer cf()
 
-	conn, err := pgx.Connect(ctx, url)
+	conn, err := pgxpool.New(ctx, url)
 	if err != nil {
 		return nil, err
 	}

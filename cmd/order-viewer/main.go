@@ -2,304 +2,104 @@ package main
 
 import (
 	"context"
-	"errors"
-	"log"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
+	"github.com/hablof/order-viewer/internal/app/cache/inmem"
 	"github.com/hablof/order-viewer/internal/app/consumer"
+	"github.com/hablof/order-viewer/internal/app/repository"
 	"github.com/hablof/order-viewer/internal/app/service"
-	"github.com/hablof/order-viewer/internal/models"
+	"github.com/hablof/order-viewer/internal/database"
+	"github.com/hablof/order-viewer/internal/httpcontroller"
+	"github.com/hablof/order-viewer/internal/templates"
+	"github.com/rs/zerolog"
 )
 
-type MockService struct{}
-
-func (MockService) SaveOrder(ctx context.Context, order models.Order) error {
-	time.Sleep(5 * time.Second)
-	return errors.New("mocked")
-}
-
-func (MockService) GetOrder(ctx context.Context, OrderUID string) (models.Order, error) {
-	// return models.Order{
-	// 	OrderUID:    OrderUID,
-	// 	TrackNumber: "CA123456789RU",
-	// 	Entry:       "Entry",
-	// 	Delivery: models.Delivery{
-	// 		Name:    "Костя",
-	// 		Phone:   "+7...",
-	// 		Zip:     "zip",
-	// 		City:    "Пенза",
-	// 		Address: "проспект Победы, 144",
-	// 		Region:  "Пензенская область",
-	// 		Email:   "spms@pnz.ru",
-	// 	},
-	// 	Payment: models.Payment{
-	// 		Transaction:  OrderUID,
-	// 		RequestID:    "",
-	// 		Currency:     "RUB",
-	// 		Provider:     "Google Pay",
-	// 		Amount:       300,
-	// 		PaymentDT:    time.Now(),
-	// 		Bank:         "WB-Bank",
-	// 		DeliveryCost: 100,
-	// 		GoodsTotal:   200,
-	// 		CustomFee:    0,
-	// 	},
-	// 	Items: []models.Item{
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       200,
-	// 			RID:         "",
-	// 			Name:        "Просто яблоко",
-	// 			Sale:        25,
-	// 			Size:        "",
-	// 			TotalPrice:  150,
-	// 			NMID:        0,
-	// 			Brand:       "apple",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       100,
-	// 			RID:         "",
-	// 			Name:        "cerf",
-	// 			Sale:        50,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "samsung",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       50,
-	// 			RID:         "",
-	// 			Name:        "padlo",
-	// 			Sale:        0,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "dgfdrfdh",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       200,
-	// 			RID:         "",
-	// 			Name:        "Просто яблоко",
-	// 			Sale:        25,
-	// 			Size:        "",
-	// 			TotalPrice:  150,
-	// 			NMID:        0,
-	// 			Brand:       "apple",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       100,
-	// 			RID:         "",
-	// 			Name:        "cerf",
-	// 			Sale:        50,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "samsung",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       50,
-	// 			RID:         "",
-	// 			Name:        "padlo",
-	// 			Sale:        0,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "dgfdrfdh",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       200,
-	// 			RID:         "",
-	// 			Name:        "Просто яблоко",
-	// 			Sale:        25,
-	// 			Size:        "",
-	// 			TotalPrice:  150,
-	// 			NMID:        0,
-	// 			Brand:       "apple",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       100,
-	// 			RID:         "",
-	// 			Name:        "cerf",
-	// 			Sale:        50,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "samsung",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       50,
-	// 			RID:         "",
-	// 			Name:        "padlo",
-	// 			Sale:        0,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "dgfdrfdh",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       200,
-	// 			RID:         "",
-	// 			Name:        "Просто яблоко",
-	// 			Sale:        25,
-	// 			Size:        "",
-	// 			TotalPrice:  150,
-	// 			NMID:        0,
-	// 			Brand:       "apple",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       100,
-	// 			RID:         "",
-	// 			Name:        "cerf",
-	// 			Sale:        50,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "samsung",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       50,
-	// 			RID:         "",
-	// 			Name:        "padlo",
-	// 			Sale:        0,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "dgfdrfdh",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       200,
-	// 			RID:         "",
-	// 			Name:        "Просто яблоко",
-	// 			Sale:        25,
-	// 			Size:        "",
-	// 			TotalPrice:  150,
-	// 			NMID:        0,
-	// 			Brand:       "apple",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       100,
-	// 			RID:         "",
-	// 			Name:        "cerf",
-	// 			Sale:        50,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "samsung",
-	// 			Status:      0,
-	// 		},
-	// 		{
-	// 			OrderUID:    OrderUID,
-	// 			ChrtID:      0,
-	// 			TrackNumber: "",
-	// 			Price:       50,
-	// 			RID:         "",
-	// 			Name:        "padlo",
-	// 			Sale:        0,
-	// 			Size:        "",
-	// 			TotalPrice:  50,
-	// 			NMID:        0,
-	// 			Brand:       "dgfdrfdh",
-	// 			Status:      0,
-	// 		},
-	// 	},
-	// 	Locale:            "",
-	// 	InternalSignature: "",
-	// 	CustomerID:        "",
-	// 	DeliveryService:   "Деловые линии",
-	// 	ShardKey:          "",
-	// 	SMID:              0,
-	// 	DateCreated:       time.Now(),
-	// 	OofShard:          "",
-	// }, nil
-	return models.Order{}, service.ErrOrderNotFound
-}
+const (
+	postgresURL string = "postgres://order_viewer:%s@127.0.0.1:5432/orders?sslmode=disable"
+)
 
 func main() {
-	// t, err := templates.GetTemplates()
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
 
-	// inmem.NewInMemCache()
-	// service.NewService()
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	log.Info().Str("log level", log.Logger.GetLevel().String()).Send()
+	log := log.Logger.With().Str("func", "main").Caller().Logger()
 
-	// mux := httpcontroller.GetRouter(, t)
-
-	// http.ListenAndServe(":8000", mux)
-
-	ctx, cf := context.WithCancel(context.Background())
+	mainCtx, cf := context.WithCancel(context.Background())
 	defer cf()
 
-	sc, err := consumer.RegisterStanClient(MockService{})
+	t, err := templates.GetTemplates()
 	if err != nil {
-		log.Println("failed to register nats client")
+		log.Error().Err(err).Send()
+		return
 	}
 
-	go sc.RunNconsumers(ctx, 3)
+	psqlPassword, ok := os.LookupEnv("PSQLPASS")
+	if !ok {
+		log.Error().Msg("failed get ENV PSQLPASS")
+		return
+	}
+
+	psql, err := database.NewPostgres(mainCtx, fmt.Sprintf(postgresURL, psqlPassword))
+	if err != nil {
+		log.Error().Err(err).Msg("failed to setup database connection")
+		return
+	}
+
+	log.Info().Msg("connected to database")
+
+	r, err := repository.NewRepository(mainCtx, psql)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to setup repository")
+		return
+	}
+
+	log.Info().Msg("set up repository")
+
+	c := inmem.NewInMemCache()
+
+	s, err := service.NewService(c, r)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to setup service")
+		return
+	}
+
+	log.Info().Msg("set up service")
+
+	mux := httpcontroller.GetRouter(s, t)
+
+	server := http.Server{
+		Addr:              ":8000",
+		Handler:           mux,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      5 * time.Second,
+		IdleTimeout:       5 * time.Second,
+	}
+
+	sc, err := consumer.RegisterStanClient(s)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to setup STAN client")
+		return
+	}
+
+	log.Info().Msg("set up STAN connection")
+
+	go server.ListenAndServe()
+	go sc.RunNconsumers(mainCtx, 2)
 
 	terminationChannel := make(chan os.Signal, 1)
 	signal.Notify(terminationChannel, os.Interrupt, syscall.SIGTERM)
 
 	<-terminationChannel
 	cf()
-	log.Println("terminating server...")
+
+	log.Info().Msg("terminating")
 
 }

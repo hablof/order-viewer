@@ -3,13 +3,14 @@ package httpcontroller
 import (
 	"bytes"
 	"context"
-	"html/template"
 	"io"
 	"net/http"
 
+	"github.com/julienschmidt/httprouter"
+	"github.com/rs/zerolog/log"
+
 	"github.com/hablof/order-viewer/internal/app/service"
 	"github.com/hablof/order-viewer/internal/models"
-	"github.com/julienschmidt/httprouter"
 )
 
 type Service interface {
@@ -40,6 +41,9 @@ func GetRouter(s Service, t TemplateExecutor) http.Handler {
 // основной http handle
 // отрисовывает информацию о заказе, либо страницу 404
 func (c *Controller) GetOrder(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+
+	log := log.Logger.With().Str("func", "Controller.GetOrder").Caller().Logger()
+
 	OrderUID := p.ByName("OrderUID")
 	order, err := c.service.GetOrder(r.Context(), OrderUID)
 	switch {
@@ -48,22 +52,23 @@ func (c *Controller) GetOrder(w http.ResponseWriter, r *http.Request, p httprout
 		return
 
 	case err != nil:
+		log.Error().Err(err).Msg("service.GetOrder unepected error")
+
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("internal server error"))
+
 		return
 	}
 
 	b := bytes.Buffer{}
-	// if err := c.template.ExecuteTemplate(&b, "order.html", order); err != nil {
-	// 	log.Println(err)
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	fmt.Fprint(w, "Internal Server Error")
+	if err := c.template.ExecuteTemplate(&b, "order.html", order); err != nil {
+		log.Error().Err(err).Msg("template.ExecuteTemplate unepected error")
 
-	// 	return
-	// }
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
 
-	tpl, err := template.ParseFiles("static/order.html")
-	_ = tpl.ExecuteTemplate(&b, "order.html", order)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(b.Bytes())

@@ -3,8 +3,9 @@ package consumer
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/hablof/order-viewer/internal/models"
 	nats "github.com/nats-io/nats.go"
@@ -36,21 +37,26 @@ type SubscriberClient struct {
 }
 
 func RegisterStanClient(s Service) (*SubscriberClient, error) {
+
+	log := log.Logger.With().Str("func", "RegisterStanClient").Caller().Logger()
+
 	opts := []nats.Option{nats.Name(clientName)}
 
 	natsConnection, err := nats.Connect(natsURL, opts...)
 	if err != nil {
-		log.Println("failed to connect to NATS: ", err)
+		log.Error().Err(err).Msg("failed to connect to NATS")
 		return nil, err
 	}
 
-	connLostOpt := stan.SetConnectionLostHandler(func(_ stan.Conn, reason error) {
-		log.Println("STAN Connection lost, reason:", reason)
+	log.Info().Msg("connected to NATS")
+
+	connLostOpt := stan.SetConnectionLostHandler(func(_ stan.Conn, err error) {
+		log.Error().Err(err).Msg("STAN Connection lost")
 	})
 
 	stanConnection, err := stan.Connect(cluster, clientID, stan.NatsConn(natsConnection), connLostOpt)
 	if err != nil {
-		log.Fatalf("failed to connect to STAN: %v", err)
+		log.Error().Err(err).Msg("failed to connect to STAN")
 		return nil, err
 	}
 
@@ -64,6 +70,9 @@ func RegisterStanClient(s Service) (*SubscriberClient, error) {
 // returns error if unable to run
 // ctx.Done stops consumers, returning nil
 func (sc *SubscriberClient) RunNconsumers(ctx context.Context, number int) error {
+
+	log := log.Logger.With().Str("func", "SubscriberClient.RunNconsumers").Caller().Logger()
+
 	ctx, cf := context.WithCancel(ctx)
 	defer cf()
 
@@ -77,18 +86,19 @@ func (sc *SubscriberClient) RunNconsumers(ctx context.Context, number int) error
 		subscription, err := sc.con.QueueSubscribe(subject, durableQueueGroup, msgHandler, stan.StartWithLastReceived(), stan.DurableName(durableQueueGroup))
 		if err != nil {
 			sc.con.Close()
-			log.Println(err)
+			log.Error().Err(err).Send()
 
 			return err
 		}
+		log.Info().Int("consumer_id", c.id).Msg("is running")
 		defer subscription.Close()
 	}
 
-	log.Println("subscribed")
+	log.Info().Msg("subscribed")
 
 	<-ctx.Done()
 
-	log.Println("consumer recived shutdown signal")
+	log.Info().Msg("consumers recived shutdown signal")
 
 	return nil
 }
@@ -102,20 +112,23 @@ func (c *consumer) getMessageHandler(ctx context.Context) func(msg *stan.Msg) {
 
 	return func(msg *stan.Msg) {
 
+		log := log.Logger.With().Str("func", "consumer.MessageHandler").
+			Caller().Int("consumer_id", c.id).Logger()
+
 		ctx, cf := context.WithTimeout(ctx, saveOrdeTimeout)
 		defer cf()
 
-		log.Printf("consumer #%d recived msg", c.id)
+		log.Debug().Msg("recived msg")
 
 		order := models.Order{}
 
 		if err := json.Unmarshal(msg.Data, &order); err != nil {
-			log.Println("failed to unmarshal data: ", err)
+			log.Error().Err(err).Msg("failed to unmarshal data")
 			return
 		}
 
 		if err := c.service.SaveOrder(ctx, order); err != nil {
-			log.Printf("consumer #%d failed to save order", c.id)
+			log.Error().Err(err).Msg("failed to save order")
 		}
 	}
 }

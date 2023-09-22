@@ -3,9 +3,42 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
+	"github.com/hablof/order-viewer/internal/app/service"
 	"github.com/hablof/order-viewer/internal/models"
+)
+
+const (
+	insertOrdersAndDeliverySQL string = `
+	WITH dq(id) as(
+		INSERT INTO delivery (name, phone, zip, city, address, region, email)
+		VALUES ($12, $13, $14, $15, $16, $17, $18)
+		RETURNING delivery_id
+	)
+	INSERT INTO orders (
+		delivery_id, 
+		order_uid, track_number, entry, locale, internal_signature,
+		customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard
+	)
+	VALUES 
+	(
+		(
+			SELECT id FROM dq
+		), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+	)`
+
+	insertPaymentSQL string = `
+	INSERT INTO payment 
+	(
+		transaction, request_id, currency, provider, amount, 
+		payment_dt, bank, delivery_cost, goods_total, custom_fee
+	)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 )
 
 const (
@@ -17,6 +50,8 @@ const (
 // т.к. затрагивает столбцы с ограничением unique. (см. https://postgrespro.ru/docs/postgrespro/15/index-unique-checks)
 // Поэтому записать валиндные заказы, но с одинаковыми айди не получится.
 func (r *Repository) InsertOrder(ctx context.Context, order models.Order) error {
+
+	log := log.Logger.With().Str("func", "Repository.InsertOrder").Caller().Logger()
 
 	// запрос в таблицу item динамический, нужно готовить каждый раз
 	query := r.initQuery.Insert("item").Columns(itemColumns)
@@ -47,20 +82,26 @@ func (r *Repository) InsertOrder(ctx context.Context, order models.Order) error 
 	insertPaymentArgs := r.paymentArgs(order.Payment)
 
 	// транзакция не нуждается в повышенном уровне изоляции,
-	// т.к. не предполагается конкурентных запросов SELECT
+	// т.к. не предполагается конкурентных запросов на чтение --
+	// только INSERT'ы. единственная проблема, с которой можем столкнуться,
+	// "lost update". Read Uncommited предотвращает lost update.
 	tx, err := r.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, insertOrderAndDeliveryStmtName, insertOrderAndDeliveryArgs...); err != nil {
+	if _, err := tx.Exec(ctx, insertOrdersAndDeliverySQL, insertOrderAndDeliveryArgs...); err != nil {
+		err = r.handleError(err, log)
 		return err
 	}
-	if _, err := tx.Exec(ctx, insertPaymentStmtName, insertPaymentArgs...); err != nil {
+
+	if _, err := tx.Exec(ctx, insertPaymentSQL, insertPaymentArgs...); err != nil {
+		err = r.handleError(err, log)
 		return err
 	}
 	if _, err := tx.Exec(ctx, insertItemQuery, insertItemArgs...); err != nil {
+		err = r.handleError(err, log)
 		return err
 	}
 
@@ -68,14 +109,27 @@ func (r *Repository) InsertOrder(ctx context.Context, order models.Order) error 
 	return err
 }
 
-func (r *Repository) paymentArgs(payment models.Payment) []interface{} {
+func (*Repository) handleError(err error, log zerolog.Logger) error {
+	if pgerr, ok := err.(*pgconn.PgError); ok {
+		if pgerrcode.IsIntegrityConstraintViolation(pgerr.Code) {
+			log.Debug().Msg("unique_violation")
+			return service.ErrDuplicatesNotAllowed
+		}
+		log.Error().Str("table", pgerr.TableName).Str("column", pgerr.ColumnName).Str("detail", pgerr.Detail).Str("hint", pgerr.Hint).Send()
+	} else {
+		log.Error().Msg("unknown error")
+	}
+	return err
+}
+
+func (*Repository) paymentArgs(payment models.Payment) []interface{} {
 	args := []interface{}{
 		payment.Transaction,
 		payment.RequestID,
 		payment.Currency,
 		payment.Provider,
 		payment.Amount,
-		payment.PaymentDT,
+		payment.PaymentDT.Time,
 		payment.Bank,
 		payment.DeliveryCost,
 		payment.GoodsTotal,
@@ -85,7 +139,7 @@ func (r *Repository) paymentArgs(payment models.Payment) []interface{} {
 	return args
 }
 
-func (r *Repository) orderAndDeliveryArgs(order models.Order) []interface{} {
+func (*Repository) orderAndDeliveryArgs(order models.Order) []interface{} {
 	args := []interface{}{
 		order.OrderUID,
 		order.TrackNumber,

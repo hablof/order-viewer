@@ -11,7 +11,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hablof/order-viewer/internal/database"
@@ -38,7 +38,7 @@ func Test_Repository(t *testing.T) {
 	ctx, cf := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cf()
 
-	var c *pgx.Conn
+	var c *pgxpool.Pool
 	t.Run("create db connect", func(t *testing.T) {
 		var err error
 		// postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca
@@ -47,7 +47,7 @@ func Test_Repository(t *testing.T) {
 			assert.FailNow(t, err.Error(), "failed open db conn")
 		}
 	})
-	defer c.Close(ctx)
+	defer c.Close()
 
 	var r *Repository
 	t.Run("create repository", func(t *testing.T) {

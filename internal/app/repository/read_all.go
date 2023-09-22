@@ -75,7 +75,7 @@ func (r *Repository) ReadAll(ctx context.Context) (map[string]models.Order, erro
 }
 
 // Хотел использовать github.com/georgysavva/scany/v2,
-// но он не умеет не находит поля во вложенных структурах...
+// но он не умеет находить поля во вложенных структурах...
 func scanOrder(orderRows pgx.Rows) (models.Order, error) {
 
 	newOrder := models.Order{}
@@ -105,7 +105,7 @@ func scanOrder(orderRows pgx.Rows) (models.Order, error) {
 		&newOrder.Payment.Currency,
 		&newOrder.Payment.Provider,
 		&newOrder.Payment.Amount,
-		&newOrder.Payment.PaymentDT,
+		&newOrder.Payment.PaymentDT.Time,
 		&newOrder.Payment.Bank,
 		&newOrder.Payment.DeliveryCost,
 		&newOrder.Payment.GoodsTotal,
