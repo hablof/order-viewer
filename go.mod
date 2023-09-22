@@ -13,6 +13,7 @@ require (
 	github.com/nats-io/stan.go v0.10.4
 	github.com/rs/zerolog v1.30.0
 	github.com/stretchr/testify v1.8.4
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -40,5 +41,4 @@ require (
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

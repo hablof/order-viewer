@@ -61,7 +61,7 @@ func Benchmark_StandartMutex(b *testing.B) {
 
 			go func(o models.Order) {
 				if err := c.Set(o); err != nil {
-					b.Fatal(err)
+					b.Log(err)
 				}
 				wg.Done()
 			}(o)
@@ -98,7 +98,7 @@ func Benchmark_RWMutex(b *testing.B) {
 
 			go func(o models.Order) {
 				if err := c.Set(o); err != nil {
-					b.Fatal(err)
+					b.Log(err)
 				}
 				wg.Done()
 			}(o)

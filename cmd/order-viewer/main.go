@@ -2,16 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/hablof/order-viewer/config"
 	"github.com/hablof/order-viewer/internal/cache/inmem"
 	"github.com/hablof/order-viewer/internal/consumer"
 	"github.com/hablof/order-viewer/internal/database"
@@ -27,8 +26,21 @@ const (
 
 func main() {
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get config")
+		return
+	}
+
+	if cfg.Debug {
+		log.Logger.Level(zerolog.DebugLevel)
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	} else {
+		log.Logger.Level(zerolog.InfoLevel)
+	}
+
 	log.Info().Str("log level", log.Logger.GetLevel().String()).Send()
+
 	log := log.Logger.With().Str("func", "main").Caller().Logger()
 
 	mainCtx, cf := context.WithCancel(context.Background())
@@ -40,13 +52,7 @@ func main() {
 		return
 	}
 
-	psqlPassword, ok := os.LookupEnv("PSQLPASS")
-	if !ok {
-		log.Error().Msg("failed get ENV PSQLPASS")
-		return
-	}
-
-	psql, err := database.NewPostgres(mainCtx, fmt.Sprintf(postgresURL, psqlPassword))
+	pg, err := database.NewPostgres(mainCtx, cfg.GetPgURL())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to setup database connection")
 		return
@@ -54,7 +60,7 @@ func main() {
 
 	log.Info().Msg("connected to database")
 
-	r, err := repository.NewRepository(mainCtx, psql)
+	r, err := repository.NewRepository(mainCtx, pg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to setup repository")
 		return
@@ -75,15 +81,13 @@ func main() {
 	mux := httpcontroller.GetRouter(s, t)
 
 	server := http.Server{
-		Addr:              ":8000",
-		Handler:           mux,
-		ReadTimeout:       5 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      5 * time.Second,
-		IdleTimeout:       5 * time.Second,
+		Addr:         ":" + cfg.HTTPPort,
+		Handler:      mux,
+		ReadTimeout:  cfg.HTTPTimeout,
+		WriteTimeout: cfg.HTTPTimeout,
 	}
 
-	sc, err := consumer.RegisterStanClient(s)
+	sc, err := consumer.RegisterStanClient(s, cfg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to setup STAN client")
 		return
@@ -92,7 +96,7 @@ func main() {
 	log.Info().Msg("set up STAN connection")
 
 	go server.ListenAndServe()
-	go sc.RunNconsumers(mainCtx, 2)
+	go sc.RunNconsumers(mainCtx, cfg)
 
 	terminationChannel := make(chan os.Signal, 1)
 	signal.Notify(terminationChannel, os.Interrupt, syscall.SIGTERM)

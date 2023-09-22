@@ -1,0 +1,18 @@
+debug: true
+consumers: 2
+
+postgres_host: 127.0.0.1
+postgres_port: 5432
+postgres_database: orders
+postgres_user: order_viewer
+
+http_port: 8000
+http_timeout: 5s
+
+nats_host: 127.0.0.1
+nats_port: 4222
+nats_cluster: my_cluster
+nats_client_name: order-viewer-sub
+nats_client_id: order-viewer-id
+nats_durable_queue_group: order-viewer-group
+nats_subject: orders

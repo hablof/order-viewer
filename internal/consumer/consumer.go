@@ -9,19 +9,20 @@ import (
 	"github.com/nats-io/stan.go"
 	"github.com/rs/zerolog/log"
 
+	"github.com/hablof/order-viewer/config"
 	"github.com/hablof/order-viewer/internal/models"
 )
 
-const (
-	natsURL = "nats://127.0.0.1:4222"
-	cluster = "my_cluster"
+// const (
+// 	natsURL = "nats://127.0.0.1:4222"
+// 	cluster = "my_cluster"
 
-	clientName = "order-viewer-sub"
-	clientID   = "order-viewer-id"
+// 	clientName = "order-viewer-sub"
+// 	clientID   = "order-viewer-id"
 
-	durableQueueGroup = "order-viewer-group"
-	subject           = "orders"
-)
+// 	durableQueueGroup = "order-viewer-group"
+// 	subject           = "orders"
+// )
 
 const (
 	saveOrdeTimeout = 5 * time.Second
@@ -36,13 +37,13 @@ type SubscriberClient struct {
 	con     stan.Conn
 }
 
-func RegisterStanClient(s Service) (*SubscriberClient, error) {
+func RegisterStanClient(s Service, cfg config.Config) (*SubscriberClient, error) {
 
 	log := log.Logger.With().Str("func", "RegisterStanClient").Caller().Logger()
 
-	opts := []nats.Option{nats.Name(clientName)}
+	opts := []nats.Option{nats.Name(cfg.NatsClientName)}
 
-	natsConnection, err := nats.Connect(natsURL, opts...)
+	natsConnection, err := nats.Connect(cfg.GetNatsURL(), opts...)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connect to NATS")
 		return nil, err
@@ -54,7 +55,7 @@ func RegisterStanClient(s Service) (*SubscriberClient, error) {
 		log.Error().Err(err).Msg("STAN Connection lost")
 	})
 
-	stanConnection, err := stan.Connect(cluster, clientID, stan.NatsConn(natsConnection), connLostOpt)
+	stanConnection, err := stan.Connect(cfg.NatsCluster, cfg.NatsClientID, stan.NatsConn(natsConnection), connLostOpt)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connect to STAN")
 		return nil, err
@@ -69,21 +70,28 @@ func RegisterStanClient(s Service) (*SubscriberClient, error) {
 // RunNconsumers is blocking operation
 // returns error if unable to run
 // ctx.Done stops consumers, returning nil
-func (sc *SubscriberClient) RunNconsumers(ctx context.Context, number int) error {
+func (sc *SubscriberClient) RunNconsumers(ctx context.Context, cfg config.Config) error {
 
 	log := log.Logger.With().Str("func", "SubscriberClient.RunNconsumers").Caller().Logger()
 
 	ctx, cf := context.WithCancel(ctx)
 	defer cf()
 
-	for i := 0; i < number; i++ {
+	for i := 0; i < cfg.Consumers; i++ {
 		c := consumer{
 			service: sc.service,
 			id:      i,
 		}
 		msgHandler := c.getMessageHandler(ctx)
 
-		subscription, err := sc.con.QueueSubscribe(subject, durableQueueGroup, msgHandler, stan.StartWithLastReceived(), stan.DurableName(durableQueueGroup))
+		subscription, err := sc.con.QueueSubscribe(
+			cfg.NatsSubject,
+			cfg.NatsDurableQueueGroup,
+			msgHandler,
+			stan.StartWithLastReceived(),
+			stan.DurableName(cfg.NatsDurableQueueGroup),
+		)
+
 		if err != nil {
 			sc.con.Close()
 			log.Error().Err(err).Send()
