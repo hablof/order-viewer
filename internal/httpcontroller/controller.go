@@ -42,17 +42,22 @@ func GetRouter(s Service, t TemplateExecutor) http.Handler {
 // отрисовывает информацию о заказе, либо страницу 404
 func (c *Controller) GetOrder(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
-	log := log.Logger.With().Str("func", "Controller.GetOrder").Caller().Logger()
-
 	OrderUID := p.ByName("OrderUID")
+
+	log := log.Logger.With().Str("func", "Controller.GetOrder").Caller().Str("requestedOrderUID", OrderUID).Logger()
+
+	log.Debug().Msg("request to get order")
+
 	order, err := c.service.GetOrder(r.Context(), OrderUID)
 	switch {
 	case err == service.ErrOrderNotFound:
+		log.Debug().Msg("order not found")
 		c.renderNotFound(w, r, OrderUID)
+
 		return
 
 	case err != nil:
-		log.Error().Err(err).Msg("service.GetOrder unepected error")
+		log.Error().Err(err).Msg("unexpected error")
 
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("internal server error"))
@@ -62,7 +67,7 @@ func (c *Controller) GetOrder(w http.ResponseWriter, r *http.Request, p httprout
 
 	b := bytes.Buffer{}
 	if err := c.template.ExecuteTemplate(&b, "order.html", order); err != nil {
-		log.Error().Err(err).Msg("template.ExecuteTemplate unepected error")
+		log.Error().Err(err).Msg("template execution unepected error")
 
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Internal Server Error"))
@@ -77,10 +82,11 @@ func (c *Controller) GetOrder(w http.ResponseWriter, r *http.Request, p httprout
 func (c *Controller) renderNotFound(w http.ResponseWriter, r *http.Request, OrderUID string) {
 	b := bytes.Buffer{}
 	if err := c.template.ExecuteTemplate(&b, "not_found.html", OrderUID); err != nil {
-
 		w.WriteHeader(http.StatusNotFound)
+
 		return
 	}
 
+	w.WriteHeader(http.StatusNotFound)
 	w.Write(b.Bytes())
 }
