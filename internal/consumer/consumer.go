@@ -37,7 +37,10 @@ type SubscriberClient struct {
 	con     stan.Conn
 }
 
-func RegisterStanClient(s Service, cfg config.Config) (*SubscriberClient, error) {
+// При успешном подключении возвращает:
+// 1) структуру-клиента nats
+// 2) канал, закрывающийся если соединение с nats-server потеряно
+func RegisterStanClient(s Service, cfg config.Config) (*SubscriberClient, <-chan struct{}, error) {
 
 	log := log.Logger.With().Str("func", "RegisterStanClient").Caller().Logger()
 
@@ -46,25 +49,27 @@ func RegisterStanClient(s Service, cfg config.Config) (*SubscriberClient, error)
 	natsConnection, err := nats.Connect(cfg.GetNatsURL(), opts...)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connect to NATS")
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Info().Msg("connected to NATS")
 
+	connectionFailureChannel := make(chan struct{})
 	connLostOpt := stan.SetConnectionLostHandler(func(_ stan.Conn, err error) {
 		log.Error().Err(err).Msg("STAN Connection lost")
+		close(connectionFailureChannel)
 	})
 
 	stanConnection, err := stan.Connect(cfg.NatsCluster, cfg.NatsClientID, stan.NatsConn(natsConnection), connLostOpt)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connect to STAN")
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &SubscriberClient{
 		service: s,
 		con:     stanConnection,
-	}, nil
+	}, connectionFailureChannel, nil
 }
 
 // RunNconsumers is blocking operation

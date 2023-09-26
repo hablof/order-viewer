@@ -20,18 +20,16 @@ import (
 	"github.com/hablof/order-viewer/internal/templates"
 )
 
-const (
-	postgresURL string = "postgres://order_viewer:%s@127.0.0.1:5432/orders?sslmode=disable"
-)
-
 func main() {
 
+	// Читаем Конфиг
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get config")
 		return
 	}
 
+	// настраиваем Логгер
 	if cfg.Debug {
 		log.Logger.Level(zerolog.DebugLevel)
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
@@ -52,6 +50,7 @@ func main() {
 		return
 	}
 
+	// Подключаемся к базе данных
 	pg, err := database.NewPostgres(mainCtx, cfg.GetPgURL())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to setup database connection")
@@ -87,7 +86,7 @@ func main() {
 		WriteTimeout: cfg.HTTPTimeout,
 	}
 
-	sc, err := consumer.RegisterStanClient(s, cfg)
+	sc, natsConnectionFailureChannel, err := consumer.RegisterStanClient(s, cfg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to setup STAN client")
 		return
@@ -95,13 +94,33 @@ func main() {
 
 	log.Info().Msg("set up STAN connection")
 
-	go server.ListenAndServe()
-	go sc.RunNconsumers(mainCtx, cfg)
+	// запускаем http api
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Error().Err(err).Msg("failed to run http server")
+			cf()
+		}
+	}()
 
+	// подписываемся на канал NATS-Streaming
+	go func() {
+		if err := sc.RunNconsumers(mainCtx, cfg); err != nil {
+			log.Error().Err(err).Msg("failed to run nats consumers")
+			cf()
+		}
+	}()
+
+	// ждём сигнал на завершение
 	terminationChannel := make(chan os.Signal, 1)
 	signal.Notify(terminationChannel, os.Interrupt, syscall.SIGTERM)
 
-	<-terminationChannel
+	select {
+	case <-terminationChannel:
+		log.Info().Msg("recived terminating signal")
+
+	case <-natsConnectionFailureChannel:
+		log.Info().Msg("nats connection failure")
+	}
 	cf()
 
 	log.Info().Msg("terminating")

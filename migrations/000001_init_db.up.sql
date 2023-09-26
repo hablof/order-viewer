@@ -42,7 +42,7 @@ CREATE TABLE payment (
 CREATE TABLE item (
 
     -- поскольку в таблице orders и track_number и order_uid обладают свойством UNIQUE, в качестве внешного ключа можно импользовать и то и другое.
-    -- Будем использовать именно order_uid.
+    -- Будем использовать именно order_uid для своего удобства.
     order_uid    VARCHAR(32)  NOT NULL, 
     chrt_id      INTEGER      NOT NULL, -- непонятно что такое
     track_number VARCHAR(32)  NOT NULL, -- not unique: по одному трекномеру несколько товаров

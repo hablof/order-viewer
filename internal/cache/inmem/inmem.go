@@ -17,6 +17,8 @@ type inMemCache struct {
 	mu sync.Mutex
 
 	// map [OrderUid] -> Order
+	// основное хранилище данных
+	// ключ -- id заказа
 	kv map[string]models.Order
 }
 
