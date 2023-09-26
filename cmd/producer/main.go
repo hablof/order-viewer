@@ -503,6 +503,8 @@ var (
 		sameIDviolatesUniqueConstraint, // error
 		orderWith15Items,               // success
 	} // Total: 5 errs, 2 ok
+
+	msgsInfo []string = []string{"invalidJSON", "invalidOrder_WrongPaymentID", "invalidOrder_NoItems", "invalidOrder_WrongTrackNumber", "validOrder", "sameIDviolatesUniqueConstraint", "orderWith15Items"}
 )
 
 func main() {
@@ -528,13 +530,13 @@ func main() {
 	}
 	defer sc.Close()
 
-	for _, msg := range Msgs {
+	for i, msg := range Msgs {
 
 		err = sc.Publish("orders", []byte(msg))
 		if err != nil {
 			log.Fatal().Err(err).Msg("Error during publish")
 		}
-		log.Info().Msg("Published msg")
+		log.Info().Msg("Published msg " + msgsInfo[i])
 	}
 
 }
